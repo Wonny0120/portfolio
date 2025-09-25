@@ -1,0 +1,182 @@
+---
+title: "Client Report - Project 1"
+subtitle: "Course DS 250"
+author: "Seongwon Cho"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+
+```{python}
+#| label: libraries
+#| include: false
+import pandas as pd
+import numpy as np
+from lets_plot import *
+LetsPlot.setup_html(no_js=True)
+
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+```
+
+
+```{python}
+
+df = pd.read_csv('names_year.csv')
+
+```
+
+
+## Elevator pitch
+
+This report analyzes name records over time, highlighting trends and patterns in the dataset. Each entry was carefully organized to track how names change across different periods. To enhance readability, I created charts with clear labels and applied color coding, making it easier to interpret the data and identify meaningful insights.
+
+```{python}
+# Any code for your pitch
+
+df_oliver = df.query ('(name == "Oliver")').sum().tail(10)
+df_oliver
+```
+
+
+## Question|Task 1
+
+I'd like to pick name 'Juliet'. I was born in 2003, so I designated the year 2003. You can check how frequently the name "Juliet" was used before the year 2003. As you can see, It used be used in 1970s a lot, but it had declined. However, it became popular in 2000s. The name "Juliet" is not quite popular name through the whole years. 
+
+```{python}
+#| label: Q1
+#| code-summary: Read and format data
+
+Seongwon_2003 =  df.query('(name == "Juliet") and (year <= 2005)')
+
+(
+  ggplot (
+          Seongwon_2003, aes (x = 'year', y = 'Total')
+         )
+         +geom_line()
+         +scale_x_continuous (format = "d")
+         +geom_vline(xintercept = 2003, color = 'red', size = 1, linetype = 'longdash')
+         +geom_text(x = 2003, y = 410, label = 'Year 2003') 
+        
+)
+```
+
+
+## Question|Task 2
+
+This chart shows the frequency of the name "Brittany" over the years. The name was most commonly used in the 1990s, so if you were speaking to someone named Brittany, you could assume they are in their early 30s. Since the name was rarely used in the 1970s, there's no need to expect someone with this name to be in their mid to late 50s.
+
+```{python}
+#| label: Q2
+#| code-summary: Read and format data
+
+df_Brittany = df.query ('name == "Brittany"')
+
+(
+  ggplot(
+          df_Brittany,
+          aes(x = 'year', y = 'Total')
+        )
+        +geom_line()
+        +scale_x_continuous (format = "d")
+        +geom_vline(xintercept = 1990, color = 'red', size = 0.7, linetype = 'longdash')
+        +geom_text(x = 1990, y = 5000, label = 'Most common Year')
+)
+
+```
+
+
+
+
+## Question|Task 3
+
+I placed these four names on one chart, distinguishing each name by color for clarity. When looking at the frequency of these names from 1920 to 2000, while there are slight differences, the names generally increased in popularity from around 1940 and about 1970 they had declined. It appears that the names were most commonly used around 1950. The post-World War 2 era in the United States was marked by strong religious influence, with high church attendance. This cultural context influenced to naming practices.
+
+```{python}
+
+df_christian = df.query ('name == ("Mary", "Martha", "Peter", "Paul") and year >=1920 and year <=2000')
+(
+  ggplot(
+         df_christian,
+         aes(x = 'year', y = 'Total', colour = 'name')
+        )
+        +geom_line()
+        +scale_x_continuous (format = "d")
+)
+
+
+```
+
+
+## Question|Task 4
+
+I aim to investigate the frequency of the name "Timothée Chalamet" in usage. It goes "Timothy" in American so, I researched how many people use the name "Timothy." Recently, Timothy has gained popularity due to the actor from the 2017 film "Call Me by Your Name". However, since around 2017, the name has been barely used. I looked into what was popular during the 1960s when the name was most frequently used, and I found the famous TV show "Timothy's Second Diary". This was the peak period for the name, after which its usage gradually declined, and it is now rarely used. In conclusion, while the name "Timothy" may have had an influence in the 1960s, we can consider that the rise of the actor Timothée has no significant impact on its current usage.
+
+```{python}
+
+df_timothy = df.query ('name == "Timothy"')
+
+(
+    ggplot(df_timothy, 
+           aes(x='year', y='Total'))  
+    + geom_line()
+    +scale_x_continuous (format = "d")
+    + geom_vline(xintercept = 1960, color = 'red', size = 0.7, linetype = 'longdash')
+    + geom_text(x = 1960, y = 25000, label = "Timothy 's Second Diary")
+    + geom_vline(xintercept = 2017, color = 'red', size = 0.7, linetype = 'longdash')
+    + geom_text(x = 2000, y = 25000, label = "Call me by your name")
+
+)
+
+
+```
+
+
+## Stretch
+
+This chart illustrates the influence of the movie E.T. on the popularity of the name "Elliot." Following the movie's initial release, there was slightly increase in the name's usage. However, this was followed by a decline. After the third release, the name experienced significant growth again. Therefore, it can be concluded that the movie had an impact on the popularity of the name "Elliot."
+
+```{python}
+
+df_elliot = df.query('name == "Elliot" and year >= 1950')
+
+(
+    ggplot(df_elliot, 
+           aes(x='year', y='Total'))  
+     + geom_line(color = "blue")
+     + ylim(0,1300)
+     + xlim(1950, 2025)
+     +scale_x_continuous (format = "d")
+     + geom_vline(xintercept = 1982, color = 'red', size = 1, linetype = 'longdash')
+     + geom_vline(xintercept = 2002, color = 'red', size = 1, linetype = 'longdash')
+     + geom_vline(xintercept = 1985, color = 'red', size = 1, linetype = 'longdash')
+     + geom_text(x = 1993, y = 1200, label = 'Second Released')
+     + geom_text(x = 1975, y = 1200, label = 'E.T Released')
+     + geom_text(x = 2010, y = 1200, label = 'Third Released')
+     + labs(
+            title = "Elliot What...?",
+            color = 'name')
+     + theme_grey()
+    
+)
+```
