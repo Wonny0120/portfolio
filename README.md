@@ -1,3 +1,4 @@
 # Seongwon portfolio
 
-Skill - R, Python, Machine Learning, 
+Skill - R, Python, Machine Learning, Tableau, Stat Modeling
+
