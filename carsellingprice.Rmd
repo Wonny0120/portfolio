@@ -1,0 +1,171 @@
+---
+title: "Car Selling Price"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(MASS)
+
+car <- read.csv("carselling.csv")
+```
+
+# How does vehicle price change as mileage increases?
+
+I collected price and mileage data for vehicles similar to mine from a car sales website "https://www.ksl.com/auto" and saved it as a CSV file.
+
+## Hypotheses
+$$
+H_0: \beta_1 = 0 \quad \text{(Mileage has no relationship with price)}
+$$
+
+$$
+H_a: \beta_1 \neq 0 \quad \text{(Mileage is associated with price)}
+$$
+
+
+## Graph
+
+```{r}
+ggplot(car, aes(x=mileage, y=cost))+
+  geom_point(alpha=0.6)+
+  geom_smooth(method="lm", color="darkblue",se = FALSE, linewidth = 1)+
+  geom_point(aes(x = 80000, y = 9000), color = "orange", size = 5, shape = 18)+
+  annotate("text", x=80000, y=9000, label="Bought")+
+  theme_minimal()
+```
+
+
+## Y-transformation 
+
+$$ \prime{Y}= log(\text{cost})$$
+The range of lambda is around 0 to -0.5. There is 0 and -1 so, I decided to use 0 value to maximize the likelihood. 
+
+```{r boxcox, echo=TRUE}
+c.lm <- lm(cost~mileage, data=car)
+#boxCox(c.lm)
+```
+
+
+```{r}
+c_log <- lm(log(cost)~mileage, data =car)
+b0 <- coef(c_log)[1]
+b1 <- coef(c_log)[2]
+
+buy_miles  <- 80000
+buy_price  <- 9000
+sell_miles <- 180000
+sell_price_hat <- exp(predict(c_log, newdata = data.frame(mileage = sell_miles)))
+
+```
+
+
+```{r}
+sell_price_hat <- exp(predict(c_log, newdata = data.frame(mileage = sell_miles)))
+
+ggplot(car, aes(x = mileage, y = cost)) +
+  geom_point(alpha = 0.6) +
+
+  stat_function(
+    fun = function(x) exp(b0 + b1 * x),
+    linewidth = 1
+  ) +
+
+  geom_point(aes(x = buy_miles, y = buy_price),
+             shape = 8, size = 5) +
+  geom_point(aes(x = sell_miles, y = sell_price_hat),
+             shape = 8, size = 5) +
+
+  geom_segment(
+    aes(x = buy_miles, y = buy_price,
+        xend = sell_miles, yend = sell_price_hat),
+    linetype = "dashed", linewidth = 1
+  ) +
+
+  annotate("label", x = buy_miles, y = buy_price,
+           label = "Bought here") +
+  annotate("label", x = sell_miles, y = sell_price_hat,
+           label = "Plan to sell here") +
+
+  labs(
+    title = "Vehicle Price vs Mileage",
+    subtitle = "Slope between  and ★ represents average purchase cost per mile",
+    x = "Mileage (miles)",
+    y = "Price (USD)"
+  ) +
+  theme_minimal()
+
+```
+
+## Prediction
+
+```{r}
+predict(c_log, data.frame(mileage=150000))
+exp(8.685233)
+predict(c.lm,data.frame(mileage=150000))
+
+```
+
+## Dignostics
+
+```{r, fig.height=3}
+par(mfrow=c(1,3))
+plot(c.lm,which=1:2)
+plot(c.lm$residuals)
+```
+
+```{r, fig.height=3}
+par(mfrow=c(1,3))
+plot(c_log,which=1:2)
+plot(c_log$residuals)
+```
+
+# Conclusion
+
+Using a log-transformed linear regression model, vehicle price was found to decrease as mileage increases. 
+Based on the fitted model, the predicted selling price at 150,000 miles is approximately 5914.92 dollars.
+
+The average purchase cost per mile, considering only the purchase price, is:
+
+$$\
+\frac{9000 - \widehat{\text{Sell Price}}}{180000 - 80000}
+$$
+
+This indicates that each additional mile driven costs approximately
+```{r}
+round((9000 - sell_price_hat)/(150000 - 80000), 3)
+```
+
+dollars in purchase cost alone.
+
+From a purchase-cost perspective, selling later reduces the average cost per mile, though operating costs were not considered in this analysis.
+
+
+
+## prediction intervals 
+
+```{r}
+p <- 150000
+mypr <- predict(c.lm, data.frame(mileage=p), interval="prediction")
+mypr
+b <- coef(c_log)
+```
+
+```{r}
+ggplot(car, aes(x=mileage, y=cost))+
+  geom_point()+
+  stat_function(fun=function(x) exp(b[1]+b[2]*x))+
+  geom_segment(x=p,xend=p, y=mypr[2], yend=mypr[3], color="red", alpha=0.01, lwd=4)+
+  theme_classic()
+```
+
+
