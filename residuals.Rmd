@@ -1,0 +1,207 @@
+---
+title: "Residuals"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(pander)
+weather <- read.csv("weather.csv")
+```
+# Explain concepts 
+
+## 1. Residual
+
+### What is a residual? 
+
+It is a vertical distance between observed data points and regression line which is your regression model. It estimates the true error . 
+
+Formula : $r_i =  Y_i - \hat{Y_i}$
+
+### What use does a single residual provide?
+
+A single residual provides how far the actual data point is from the estimated regression line. 
+
+1. Identifying Outliers: A very large residual shows a weird data point where the model failed significantly. 
+
+2. Measuring Precision: It tells you exactly how much "off" your model was for that specific case, giving you a concrete sense of the error in real-world units (degrees).
+
+```{r}
+montemp <- lm(Max_Temp ~ twoday_hi_lo_avg, data=weather)
+summary(montemp)%>%pander()
+```
+
+```{r}
+ggplot(weather, aes(x=twoday_hi_lo_avg, y=Max_Temp))+
+  geom_point()+
+  geom_smooth(method="lm",se=FALSE)+
+  geom_segment(aes(x=twoday_hi_lo_avg, xend=twoday_hi_lo_avg, y=Max_Temp, yend=montemp$fit))
+```
+
+
+## 2. SSE (Sum of Squared Errors)
+
+### What is SSE? 
+
+The variation that the model failed to explain. It measures how much the residuals deviate from the line. 
+
+Formula: $\sum(Y_i-\hat{Yi})^2$
+R-code : sum( (Y - mylm$fit)^2 )
+
+Minimum / Maximum : The smallest is 0 which is every point falls exactly on the line. The largest is SSTO. 
+
+We want it SMALL. A small SSE means our model's predictions are very close to the actual data. 
+
+This is SSE number for my regression model.
+
+```{r}
+round(sum((weather$Max_Temp-montemp$fit)^2),2)
+```
+
+```{r}
+ggplot(weather, aes(x=twoday_hi_lo_avg, y=Max_Temp))+
+  geom_point()+
+  geom_smooth(method="lm",se=FALSE)+
+  geom_segment(aes(x=twoday_hi_lo_avg, xend=twoday_hi_lo_avg, y=Max_Temp, yend=montemp$fit))+
+  labs(title="Sum of the difference between actual data point and regression line")
+```
+
+
+### Relationship 
+
+SSE = SSTO - SSR
+
+## 3. SSR (Sum of Squared Regression)
+
+### What is SSR?
+
+This measures how much of the total variation is "explained" by the regression line. It is the sum of the squared differences between the predicted values ($\hat{Y_i}$) and the mean ($\bar{Y_i}$).
+
+Formula : $\sum(\hat{Y_i}-\bar{Y})^2$
+R-code : 	sum( (mylm$fit - mean(Y))^2 )
+
+Minimum / Maximum : The smallest is 0 and the maximum is SSTO. 
+
+We want this large. We want our model to explain as much of the total variation as possible. 
+
+This is SSR number for my regression model.
+
+```{r}
+round(sum((montemp$fit-mean(weather$Max_Temp))^2),2)
+```
+
+```{r}
+ggplot(weather, aes(x=twoday_hi_lo_avg, y=Max_Temp))+
+  geom_smooth(method="lm", se=FALSE)+
+  geom_hline(yintercept = mean(weather$Max_Temp), linetype="dashed")+
+  geom_segment(aes(twoday_hi_lo_avg, xend=twoday_hi_lo_avg, y=fitted(montemp), yend=mean(weather$Max_Temp)))+
+  labs(title="Sum of difference between Y-average and regression line")
+```
+
+
+### Relationship 
+
+SSR = SSTO - SSE
+
+## 4. SSTO
+
+### What is SSTO?
+
+This measures the total variation in the observed data (Y) relative to the mean ($\bar{Y}$). It represents the "total uncertainty" we would have if we did not use any predictors. 
+
+Formula : $\sum(Y_i - \bar{Y})^2$
+R-code : sum( (Y - mean(Y))^2 )
+
+Minimum / Maximum : The smallest is 0 and the maximum is infinity. 
+
+There is not desired direction, because this is a property of the data itself, it does not change based on the model. 
+
+This is SSTO number for my regression model.
+
+```{r}
+sum((weather$Max_Temp-mean(weather$Max_Temp))^2)
+```
+
+```{r}
+ggplot(weather, aes(x=twoday_hi_lo_avg, y=Max_Temp))+
+  geom_point()+
+  geom_hline(yintercept=mean(weather$Max_Temp), linetype="dashed")+
+  geom_segment(aes(x=twoday_hi_lo_avg, xend=twoday_hi_lo_avg, y=Max_Temp, yend=mean(weather$Max_Temp)), linetype="dashed")+
+  labs(title="Sum of difference between actual data point and average of Y-value")
+```
+
+
+### Relationship 
+
+SSTO = SSE + SSR
+
+### How do they differ?
+
+Each feature focuses on a different thing. SSTO focuses on the data's spread, SSR is on the model's "lift", SSE is on the model's "miss". Also, it asks different questions, SSTO asks "How far is the point from the average", SSR asks "How far is the prediction from the average?" and SSE asks "How far is the point from the prediction?". 
+It also has different dependency SSTO is constant for a dataset, SSR and SSE change based on your model/variables. 
+
+### How are they used to gain insight?
+
+These values are the "engine room" of regression diagnostics. We use them together to answer two big questions.
+- Is the model any good? ($R^2$) The coefficient of determination is the ratio of explained variation to total variation. 
+If $R^2$ = 0.8, it means your model explains 80% of the variation in the data. 
+
+## 5. R-squared
+
+Definition : **The proportion of variability in Y than can be explained by the regression.** The **variability** means how spread out the observed data are from average line. The word **explained** refers to the part of that spread that the regression line captures through the predicted values, it moves away from average line. The **proportion** explained by the model R^2 which tells what fraction of the total variation in Y.
+
+math equation : SSR/SSTO or 1-SSE/SSTO
+
+How is R-squared properly interpreted? 
+
+For example if R^2 = 0.62, then about 62% of the variability in Y (around its mean) is explained by the regression on X, and about 38% is not explained (left in SSE).
+
+### How is it calculated? 
+
+There is two different way to calculate the R squared.
+
+```{r}
+summary(montemp)$r.squared
+```
+Using sum of squares
+
+```{r}
+SSR <- round(sum((montemp$fit-mean(weather$Max_Temp))^2),2)
+SSTO <- sum((weather$Max_Temp-mean(weather$Max_Temp))^2)
+
+SSR/SSTO
+```
+
+```{r}
+ggplot(weather, aes(x=twoday_hi_lo_avg, y=Max_Temp)) + 
+  geom_point() + 
+  geom_smooth(method="lm", se=F, formula=y~x) + 
+  geom_rect(aes(xmin=twoday_hi_lo_avg, xmax=twoday_hi_lo_avg + montemp$res*0.4, ymin=montemp$fit, ymax=Max_Temp), alpha=0.1, color="pink") +
+  geom_segment(aes(x=twoday_hi_lo_avg, xend=twoday_hi_lo_avg, y=Max_Temp, yend=montemp$fit), color="darkgray") 
+  
+```
+
+
+
+### What information does it provide about a regression analysis? 
+
+It explains the model fit strength, how much of Y's spread is captured by the model. 
+
+### How does it differ from the information provided in the p-value for the slope term? 
+
+The slope p-value tells whether the relationship between X and Y has statistical evidence.R squared tells how much variation that relationship explains.
+
+## 6. MSE & "Residual Standard Error"
+
+MSE stands for Mean Squared Error. In regression, it is the average squared size of the residuals, so it measures how far the observed Y_i values typically are from the fitted values $\hat{Y_i}$. MSE can be large (there’s no upper bound if residuals are huge), and the smallest it can be is 0, which would only happen if every point lies exactly on the fitted line. 
+
+MSE does not measure the same thing as R squared. R squared measures the proportion of total variability in Y explained by the model, while MSE measures the average unexplained squared error. However, they are related because both depend on SSE, R squared = 1 - SSE/SSTO, and MSE is essentially SSE divided by degrees of freedom, SSE/(n-2). 
+
+The residual standard error is the square root of MSE. In R, you can find it in summary(lm) on the line that says **"Residual standard error:...on...degrees of freedom"** We want MSE and residual standard error to be small, because smaller values mean the fitted line's predictions are closer to the observed data. For units, if your response Y is temperature in degrees Fahrenheit, while MSE is in squared. In contrast, R squared has not units, it is just percent of variability explained.
+
+ 
