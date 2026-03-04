@@ -1,0 +1,95 @@
+---
+title: "It's about time"
+author: "Seongwon Cho"
+execute: 
+  warning: false
+format:
+  html:
+    code-fold: true
+    code-line-numbers: true
+project:
+  type: website
+  output-dir: docs
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(riem)
+library(dplyr)
+```
+
+```{r}
+data <- read.csv("https://byuistats.github.io/M335/data/sales.csv")
+#view(data)
+```
+
+```{r}
+data1 <- data %>%
+mutate(
+datetime_utc = ymd_hms(Time),
+datetime_mt = with_tz(datetime_utc, tzone = "America/Boise"),
+day = as_date(datetime_mt),
+week = floor_date(datetime_mt, "week"),
+month = floor_date(datetime_mt, "month")
+)
+#view(data1)
+```
+
+```{r}
+revenue_daily <- data1 %>%
+  group_by(Name, day) %>%
+  summarise(total_revenue = sum(Amount, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(date = day)
+
+revenue_weekly <- data1 %>%
+  group_by(Name, week) %>%
+  summarise(total_revenue = sum(Amount, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(date = week)
+
+revenue_monthly <- data1 %>%
+  group_by(Name, month) %>%
+  summarise(total_revenue = sum(Amount, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(date = month)
+
+revenue_agg <- bind_rows(
+  "Daily" = revenue_daily,
+  "Weekly" = revenue_weekly,
+  "Monthly" = revenue_monthly,
+  .id = "Aggregation"
+) %>%
+  mutate(
+    Aggregation = factor(Aggregation, levels = c("Daily", "Weekly", "Monthly"))
+  )
+
+#view(revenue_agg)
+```
+
+From this visualization, I think HotDiggity performed the best. It has the highest revenue generally. LeBelle has the highest revenue value in a week plot, but it also has extreme up and down. Thus, HotDiggity has the best revenue.
+
+```{r, fig.width=12}
+ggplot(revenue_agg, aes(x = date, y = total_revenue, color = Name, group = Name)) +
+  geom_line(alpha = 0.8, linewidth = 1.1) +
+  # Add points to weekly and monthly plots
+  geom_point(data = filter(revenue_agg, Aggregation != "Daily"), size = 2) +
+  
+  # Facet by the aggregation level
+  facet_wrap(~ Aggregation, scales = "free", ncol = 3) +
+  
+  # Format labels
+  scale_x_date(date_labels = "%b %d") +
+  scale_color_brewer(palette = "Set2") +
+  
+  # Add titles
+  labs(
+    title = "Gross Revenue Over Time by Company",
+    subtitle = "Data aggregated at Daily, Weekly, and Monthly levels",
+    x = "Date",
+    y = "Gross Revenue",
+    color = "Company"
+  ) +
+  theme(legend.position = "bottom")
+```
