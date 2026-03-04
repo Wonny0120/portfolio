@@ -1,0 +1,63 @@
+---
+title: "Stocks"
+author: "Seongwon Cho"
+execute: 
+  warning: false
+format:
+  html:
+    code-fold: true
+    code-line-numbers: true
+project:
+  type: website
+  output-dir: docs
+---
+
+```{r}
+#install.packages("tidyquant")
+library(tidyquant)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+```
+
+```{r}
+start_date <- as_date("2025-06-04")
+end_date <- as_date("2025-11-04")
+
+my_stock <- c("AMZN","NFLX","GOOG")
+friend_stock <- c("NKE","MCD","AAPL")
+stocks <- c(my_stock, friend_stock)
+
+actual_stock <- tq_get(stocks, from=start_date, to=end_date)
+
+individual_returns <- actual_stock%>%
+  group_by(symbol)%>%
+  tq_transmute(
+    select=adjusted,
+    mutate_fun=periodReturn,
+    period="daily",
+    col_rename = "daily_stock"
+  )%>%
+  mutate(team=ifelse(symbol %in% friend_stock, "Friend", "Me"))%>%
+  ungroup()
+
+
+individual_cumulative_returns <- individual_returns %>%
+  group_by(symbol, team) %>%
+  mutate(Cumulative_Return = cumprod(1 + daily_stock)) %>%
+  ungroup()
+
+#view(individual_cumulative_returns)
+```
+
+```{r}
+ggplot(individual_cumulative_returns, aes(x=date, y=Cumulative_Return, color=team))+
+  geom_line()+
+  labs(title="Who has better stocok?",
+       x="Date",y="Cumulative return stock")+
+  theme_minimal()
+```
+
+# Summary
+
+I chose AMZN, NFLX, GOOG. My friend chose NKE, MCD, AAPL. I tracked those company's stock 2025.06-2025.11. I pulled out daily stock information and I was able to compare mine and my friend's with this visualization. From this graph, my stocks showed a slow increase; however, over time, my stocks gradually got bigger than my friend's.
